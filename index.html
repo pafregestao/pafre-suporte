@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1a3a5c">
+<title>PAFRE — Painel de Suporte</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--azul:#1a3a5c;--ok:#2d7a3a;--warn:#b8630a;--bad:#c0392b;--bg:#f4f4ef;--card:#fff;--border:#e4e4dc;--txt:#1a1a1a;--txt2:#666;--txt3:#999}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;background:var(--bg);color:var(--txt);min-height:100vh}
+.hdr{background:var(--azul);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100}
+.hdr-logo{height:32px;filter:brightness(0) invert(1);opacity:.9}
+.hdr-title{flex:1}.hdr-title h1{font-size:15px;font-weight:700}.hdr-title p{font-size:11px;opacity:.65;margin-top:1px}
+.hdr-ico{width:34px;height:34px;background:rgba(255,255,255,.12);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer}
+.wrap{max-width:1100px;margin:0 auto;padding:16px}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:16px}
+.mc{background:var(--card);border-radius:12px;padding:12px 14px;border:1px solid var(--border)}
+.mc-lbl{font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.mc-val{font-size:22px;font-weight:700;color:var(--azul)}
+.sec{font-size:10px;font-weight:700;color:var(--txt3);letter-spacing:.08em;text-transform:uppercase;margin:16px 0 8px;display:flex;align-items:center;justify-content:space-between}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:8px}
+.badge{font-size:11px;padding:3px 9px;border-radius:99px;font-weight:600}
+.badge.ok{background:#e8f5e9;color:#2d7a3a}.badge.warn{background:#fff3e0;color:#b8630a}
+.badge.bad{background:#fdecea;color:#c0392b}.badge.blue{background:#e3f0fb;color:#1565c0}.badge.gray{background:#f0efe8;color:#555}
+.chamado-row{display:flex;align-items:flex-start;gap:10px;padding:12px 0;border-bottom:1px solid #f4f4ef;cursor:pointer;transition:background .1s}
+.chamado-row:last-child{border-bottom:none}
+.chamado-row:hover{background:#fafaf8;margin:0 -16px;padding:12px 16px;border-radius:8px}
+.sev-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.filtros{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.fbtn{font-size:12px;padding:5px 12px;border-radius:99px;border:1px solid var(--border);background:transparent;color:var(--txt2);cursor:pointer}
+.fbtn.on{background:var(--azul);color:#fff;border-color:var(--azul)}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:flex-start;justify-content:center;padding:40px 14px;overflow-y:auto}
+.modal-overlay.on{display:flex}
+.modal-box{background:var(--card);border-radius:16px;width:100%;max-width:680px;margin-bottom:40px}
+.modal-hdr{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;position:sticky;top:0;background:var(--card);border-radius:16px 16px 0 0;z-index:10}
+.modal-body{padding:16px 20px}
+.close-btn{background:none;border:none;font-size:22px;cursor:pointer;color:var(--txt3);line-height:1}
+.chat-bubble{margin-bottom:8px;display:flex;flex-direction:column}
+.chat-bubble.pafre{align-items:flex-end}.chat-bubble.cliente{align-items:flex-start}
+.bubble{max-width:80%;padding:9px 13px;border-radius:12px;font-size:13px;line-height:1.5}
+.bubble.pafre{background:var(--azul);color:#fff;border-radius:12px 12px 4px 12px}
+.bubble.cliente{background:#f0f0eb;color:var(--txt);border-radius:12px 12px 12px 4px}
+.bubble-meta{font-size:10px;color:var(--txt3);margin-top:3px}
+.status-sel{font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:8px;font-family:inherit;cursor:pointer}
+.sla-bar{height:6px;border-radius:99px;overflow:hidden;background:#f0efe8;margin-top:4px}
+.sla-fill{height:100%;border-radius:99px}
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg)}
+.login-box{background:var(--card);border-radius:16px;padding:32px;width:92%;max-width:380px;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+.login-box img{height:80px;margin-bottom:16px;opacity:.8}
+.login-box h2{font-size:18px;font-weight:700;color:var(--azul);margin-bottom:4px}
+.login-box p{font-size:13px;color:var(--txt3);margin-bottom:20px}
+.fi{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:9px;font-size:14px;font-family:inherit;margin-bottom:10px}
+.fi:focus{outline:none;border-color:var(--azul)}
+.btn-primary{width:100%;padding:11px;border-radius:9px;background:var(--azul);color:#fff;border:none;font-size:14px;font-weight:600;cursor:pointer}
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-box">
+    <img src="pafre-logo.png" alt="PAFRE" onerror="this.style.display='none'">
+    <h2>PAFRE Suporte</h2>
+    <p>Painel exclusivo de atendimento</p>
+    <input class="fi" type="email" id="l-email" placeholder="E-mail" autocomplete="email">
+    <div style="position:relative">
+      <input class="fi" type="password" id="l-senha" placeholder="Senha" onkeydown="if(event.key==='Enter')fazerLogin()" style="padding-right:40px">
+      <button type="button" id="olho-login" style="position:absolute;right:10px;top:12px;background:none;border:none;cursor:pointer;font-size:16px;color:var(--txt3)">👁️</button>
+    </div>
+    <div id="msg-login" style="font-size:12px;color:var(--bad);margin-bottom:8px;min-height:16px"></div>
+    <button class="btn-primary" onclick="fazerLogin()">Entrar</button>
+  </div>
+</div>
+
+<div id="painel" style="display:none">
+  <div class="hdr">
+    <img src="pafre-logo.png" alt="PAFRE" class="hdr-logo" onerror="this.outerHTML='<span style=&quot;font-size:15px;font-weight:700;letter-spacing:.05em&quot;>PAFRE</span>'">
+    <div class="hdr-title"><h1>Painel de Suporte</h1><p id="hdr-usuario">PAFRE GESTÃO & TECNOLOGIA</p></div>
+    <div class="hdr-ico" onclick="abrirConfigUsuarios()" title="Usuários">👥</div>
+    <div class="hdr-ico" onclick="fazerLogout()" title="Sair">🚪</div>
+  </div>
+  <div class="wrap">
+    <div class="metrics" id="metricas"></div>
+    <div class="sec" style="display:flex;justify-content:space-between;align-items:center">
+      Chamados de suporte
+      <input id="busca" placeholder="🔍 Buscar..." style="font-size:12px;padding:5px 10px;border:1px solid var(--border);border-radius:8px;width:180px" oninput="renderChamados()">
+    </div>
+    <div class="filtros">
+      <button class="fbtn on" onclick="setFiltro('todos',this)">Todos</button>
+      <button class="fbtn" onclick="setFiltro('Aberto',this)">Abertos</button>
+      <button class="fbtn" onclick="setFiltro('Em análise',this)">Em análise</button>
+      <button class="fbtn" onclick="setFiltro('Aguardando cliente',this)">Aguardando</button>
+      <button class="fbtn" onclick="setFiltro('Resolvido',this)">Resolvidos</button>
+      <button class="fbtn" onclick="setFiltro('Fechado',this)">Fechados</button>
+    </div>
+    <div class="card" style="padding:0 16px" id="lista-chamados">
+      <div style="padding:20px;text-align:center;color:var(--txt3)">Carregando...</div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <div style="flex:1;padding-right:12px">
+        <div style="font-weight:700;font-size:15px" id="modal-titulo">—</div>
+        <div style="font-size:12px;color:var(--txt3);margin-top:3px" id="modal-meta">—</div>
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap" id="modal-badges"></div>
+      </div>
+      <button class="close-btn" onclick="fecharModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:13px;color:var(--txt2);background:#f8f8f4;border-radius:10px;padding:12px;margin-bottom:14px" id="modal-desc"></div>
+      <div style="font-size:10px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Conversa</div>
+      <div id="modal-chat" style="margin-bottom:12px;max-height:300px;overflow-y:auto"></div>
+      <div style="display:flex;gap:8px;align-items:flex-end">
+        <textarea id="msg-input" placeholder="Responder ao cliente..." style="flex:1;font-size:13px;padding:9px 12px;border:1px solid var(--border);border-radius:9px;font-family:inherit;resize:none;height:72px"></textarea>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <select id="novo-status" class="status-sel">
+            <option value="">Status...</option>
+            <option value="Em análise">Em análise</option>
+            <option value="Aguardando cliente">Aguardando cliente</option>
+            <option value="Resolvido">Resolvido</option>
+            <option value="Fechado">Fechado</option>
+          </select>
+          <button onclick="enviarResposta()" style="padding:8px 16px;background:var(--azul);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Enviar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalUsuarios">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-hdr">
+      <div><div style="font-weight:700;font-size:15px">👥 Usuários do painel</div></div>
+      <button class="close-btn" onclick="document.getElementById('modalUsuarios').classList.remove('on')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="lista-usuarios-painel" style="margin-bottom:16px"></div>
+      <div style="border-top:1px solid var(--border);padding-top:14px">
+        <div style="font-size:12px;font-weight:600;color:var(--txt2);margin-bottom:8px">Adicionar usuário</div>
+        <input class="fi" id="novo-user-email" placeholder="E-mail">
+        <input class="fi" id="novo-user-nome" placeholder="Nome">
+        <div style="position:relative">
+          <input class="fi" type="password" id="novo-user-senha" placeholder="Senha (mín. 6 caracteres)" style="padding-right:40px">
+          <button type="button" id="olho-novo" style="position:absolute;right:10px;top:12px;background:none;border:none;cursor:pointer;font-size:16px;color:var(--txt3)">👁️</button>
+        </div>
+        <button onclick="criarUsuario()" style="width:100%;padding:10px;background:var(--ok);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">✅ Criar usuário</button>
+        <div id="msg-novo-user" style="font-size:12px;margin-top:8px;min-height:16px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+firebase.initializeApp({
+  apiKey:"AIzaSyB2raYjyu5lOEuHAtXHrFyFBdASBf48ljI",
+  authDomain:"pafre-gestao.firebaseapp.com",
+  projectId:"pafre-gestao",
+  storageBucket:"pafre-gestao.firebasestorage.app",
+  messagingSenderId:"305254099508",
+  appId:"1:305254099508:web:a6e9cf360a858d87c8f861"
+});
+var auth=firebase.auth();
+var db=firebase.firestore();
+var chamados=[];
+var filtroStatus='todos';
+var chamadoAtual=null;
+var SEV_COR={Crítica:'#c0392b',Alta:'#b8630a',Média:'#1565c0',Baixa:'#2d7a3a'};
+var STATUS_BADGE={Aberto:'bad','Em análise':'warn','Aguardando cliente':'blue',Resolvido:'ok',Fechado:'gray'};
+var SLA_HORAS={Crítica:4,Alta:24,Média:48,Baixa:120};
+
+document.addEventListener('DOMContentLoaded',function(){
+  [['olho-login','l-senha'],['olho-novo','novo-user-senha']].forEach(function(p){
+    var btn=document.getElementById(p[0]),inp=document.getElementById(p[1]);
+    if(btn&&inp) btn.addEventListener('click',function(){
+      inp.type=inp.type==='password'?'text':'password';
+      btn.textContent=inp.type==='text'?'🙈':'👁️';
+    });
+  });
+});
+
+auth.onAuthStateChanged(function(user){
+  if(user){
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('painel').style.display='block';
+    document.getElementById('hdr-usuario').textContent=user.email;
+    carregarChamados();
+  } else {
+    document.getElementById('login-screen').style.display='flex';
+    document.getElementById('painel').style.display='none';
+  }
+});
+
+function fazerLogin(){
+  var email=document.getElementById('l-email').value.trim();
+  var senha=document.getElementById('l-senha').value;
+  var msg=document.getElementById('msg-login');
+  if(!email||!senha){msg.textContent='Preencha e-mail e senha.';return;}
+  auth.signInWithEmailAndPassword(email,senha).catch(function(){
+    msg.textContent='E-mail ou senha incorretos.';
+  });
+}
+
+function fazerLogout(){if(confirm('Deseja sair?')) auth.signOut();}
+
+function carregarChamados(){
+  db.collection('chamados_suporte').orderBy('criadoEm','desc').onSnapshot(function(snap){
+    chamados=[];
+    snap.forEach(function(doc){chamados.push(Object.assign({id:doc.id},doc.data()));});
+    renderMetricas();renderChamados();
+  });
+}
+
+function renderMetricas(){
+  var total=chamados.length;
+  var abertos=chamados.filter(function(c){return c.status==='Aberto';}).length;
+  var criticos=chamados.filter(function(c){return c.severidade==='Alta'&&c.status!=='Fechado';}).length;
+  var hoje=new Date().toDateString();
+  var novosHoje=chamados.filter(function(c){return c.criadoEm&&new Date(c.criadoEm.toDate?c.criadoEm.toDate():c.criadoEm).toDateString()===hoje;}).length;
+  document.getElementById('metricas').innerHTML=
+    mc('Total',total)+mc('Abertos',abertos,'warn')+mc('Alta prioridade',criticos,'bad')+mc('Hoje',novosHoje,'blue');
+}
+function mc(l,v,c){return '<div class="mc"><div class="mc-lbl">'+l+'</div><div class="mc-val" style="color:var(--'+(c||'azul')+')">'+v+'</div></div>';}
+
+function setFiltro(f,btn){
+  filtroStatus=f;
+  document.querySelectorAll('.filtros .fbtn').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');renderChamados();
+}
+
+function renderChamados(){
+  var q=(document.getElementById('busca').value||'').toLowerCase();
+  var filtrados=chamados.filter(function(c){
+    var matchStatus=filtroStatus==='todos'||c.status===filtroStatus;
+    var matchBusca=!q||(c.titulo||'').toLowerCase().includes(q)||(c.condominio||'').toLowerCase().includes(q)||(c.nome||'').toLowerCase().includes(q);
+    return matchStatus&&matchBusca;
+  });
+  var el=document.getElementById('lista-chamados');
+  if(!filtrados.length){el.innerHTML='<div style="padding:20px;text-align:center;color:var(--txt3)">Nenhum chamado encontrado.</div>';return;}
+  el.innerHTML=filtrados.map(function(c){
+    var cor=SEV_COR[c.severidade]||'#888';
+    var dt=c.criadoEm&&c.criadoEm.toDate?c.criadoEm.toDate().toLocaleDateString('pt-BR'):'—';
+    var slaH=SLA_HORAS[c.severidade]||48;
+    var criadoTs=c.criadoEm&&c.criadoEm.toDate?c.criadoEm.toDate().getTime():Date.now();
+    var slaPct=Math.min(100,Math.round((Date.now()-criadoTs)/(slaH*3600000)*100));
+    var slaColor=slaPct<60?'#2d7a3a':slaPct<85?'#b8630a':'#c0392b';
+    var msgs=(c.mensagens||[]).length;
+    return '<div class="chamado-row" onclick="abrirChamado(\''+c.id+'\')">'+
+      '<div class="sev-dot" style="background:'+cor+'"></div>'+
+      '<div style="flex:1">'+
+        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+
+          '<div style="font-weight:600;font-size:13px">'+escHtml(c.titulo||'')+'</div>'+
+          '<span class="badge '+(STATUS_BADGE[c.status]||'gray')+'">'+c.status+'</span>'+
+          '<span style="font-size:11px;padding:2px 8px;border-radius:99px;background:#f0efe8;color:#555">'+escHtml(c.severidade||'')+'</span>'+
+        '</div>'+
+        '<div style="font-size:11px;color:var(--txt3);margin-top:3px">🏢 '+escHtml(c.condominio||'—')+' · 👤 '+escHtml(c.nome||'—')+' · 📅 '+dt+(msgs?' · 💬 '+msgs+' msg':'')+'</div>'+
+        '<div style="margin-top:5px"><div style="font-size:10px;color:'+slaColor+';margin-bottom:2px">SLA: '+slaH+'h ('+slaPct+'% decorrido)</div>'+
+        '<div class="sla-bar"><div class="sla-fill" style="width:'+slaPct+'%;background:'+slaColor+'"></div></div></div>'+
+      '</div>'+
+      '<span style="color:var(--txt3);font-size:16px;margin-left:8px">›</span>'+
+    '</div>';
+  }).join('');
+}
+
+function abrirChamado(id){
+  chamadoAtual=chamados.find(function(c){return c.id===id;});
+  if(!chamadoAtual) return;
+  var c=chamadoAtual;
+  document.getElementById('modal-titulo').textContent=c.titulo||'—';
+  document.getElementById('modal-meta').textContent='🏢 '+(c.condominio||'—')+' · 👤 '+(c.nome||'—')+' · '+(c.email||'—')+' · 📅 '+(c.criadoEm&&c.criadoEm.toDate?c.criadoEm.toDate().toLocaleString('pt-BR'):'—');
+  var cor=SEV_COR[c.severidade]||'#888';
+  document.getElementById('modal-badges').innerHTML='<span class="badge '+(STATUS_BADGE[c.status]||'gray')+'">'+c.status+'</span><span style="font-size:11px;padding:3px 9px;border-radius:99px;background:'+cor+'22;color:'+cor+';font-weight:600">'+c.severidade+'</span>';
+  document.getElementById('modal-desc').textContent=c.desc||'Sem descrição.';
+  renderChat(c);
+  document.getElementById('novo-status').value='';
+  document.getElementById('msg-input').value='';
+  document.getElementById('modalOverlay').classList.add('on');
+}
+
+function renderChat(c){
+  var msgs=c.mensagens||[];
+  var el=document.getElementById('modal-chat');
+  if(!msgs.length){el.innerHTML='<div style="color:var(--txt3);font-size:13px">Nenhuma mensagem ainda.</div>';return;}
+  el.innerHTML=msgs.map(function(m){
+    var isPafre=m.role==='pafre';
+    return '<div class="chat-bubble '+(isPafre?'pafre':'cliente')+'">'+
+      '<div class="bubble '+(isPafre?'pafre':'cliente')+'">'+escHtml(m.texto)+'</div>'+
+      '<div class="bubble-meta">'+escHtml(m.autor)+(m.criadoEm?' · '+m.criadoEm:'')+'</div>'+
+    '</div>';
+  }).join('');
+  el.scrollTop=el.scrollHeight;
+}
+
+function enviarResposta(){
+  if(!chamadoAtual) return;
+  var texto=document.getElementById('msg-input').value.trim();
+  var novoStatus=document.getElementById('novo-status').value;
+  if(!texto&&!novoStatus){alert('Digite uma mensagem ou selecione um status.');return;}
+  var user=auth.currentUser;
+  var update={};
+  if(novoStatus) update.status=novoStatus;
+  if(texto){
+    var msgs=(chamadoAtual.mensagens||[]).concat([{texto:texto,autor:user.email,role:'pafre',criadoEm:new Date().toLocaleString('pt-BR')}]);
+    update.mensagens=msgs;
+  }
+  db.collection('chamados_suporte').doc(chamadoAtual.id).update(update).then(function(){
+    document.getElementById('msg-input').value='';
+    document.getElementById('novo-status').value='';
+    Object.assign(chamadoAtual,update);
+    renderChat(chamadoAtual);
+    if(novoStatus){
+      var cor=SEV_COR[chamadoAtual.severidade]||'#888';
+      document.getElementById('modal-badges').innerHTML='<span class="badge '+(STATUS_BADGE[novoStatus]||'gray')+'">'+novoStatus+'</span><span style="font-size:11px;padding:3px 9px;border-radius:99px;background:'+cor+'22;color:'+cor+';font-weight:600">'+chamadoAtual.severidade+'</span>';
+    }
+  }).catch(function(e){alert('Erro: '+e.message);});
+}
+
+function fecharModal(){document.getElementById('modalOverlay').classList.remove('on');chamadoAtual=null;}
+document.getElementById('modalOverlay').addEventListener('click',function(e){if(e.target===this)fecharModal();});
+
+function abrirConfigUsuarios(){carregarUsuariosPainel();document.getElementById('modalUsuarios').classList.add('on');}
+
+function carregarUsuariosPainel(){
+  db.collection('usuarios_pafre').get().then(function(snap){
+    var el=document.getElementById('lista-usuarios-painel');
+    if(snap.empty){el.innerHTML='<div style="color:var(--txt3);font-size:13px">Nenhum usuário cadastrado ainda.</div>';return;}
+    el.innerHTML=snap.docs.map(function(doc){
+      var d=doc.data();
+      return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f4f4ef">'+
+        '<div style="flex:1"><div style="font-weight:600;font-size:13px">'+escHtml(d.nome||'')+'</div><div style="font-size:11px;color:var(--txt3)">'+escHtml(d.email||'')+'</div></div>'+
+        '<button onclick="removerUsuario(\''+doc.id+'\')" style="font-size:11px;padding:3px 8px;border-radius:6px;border:1px solid #ffcdd2;background:#fdecea;color:#c0392b;cursor:pointer">Remover</button>'+
+      '</div>';
+    }).join('');
+  });
+}
+
+function criarUsuario(){
+  var email=document.getElementById('novo-user-email').value.trim();
+  var nome=document.getElementById('novo-user-nome').value.trim();
+  var senha=document.getElementById('novo-user-senha').value;
+  var msg=document.getElementById('msg-novo-user');
+  if(!email||!nome||!senha){msg.textContent='Preencha todos os campos.';msg.style.color='var(--bad)';return;}
+  if(senha.length<6){msg.textContent='Senha mínimo 6 caracteres.';msg.style.color='var(--bad)';return;}
+  auth.createUserWithEmailAndPassword(email,senha).then(function(cred){
+    return db.collection('usuarios_pafre').doc(cred.user.uid).set({email:email,nome:nome,criadoEm:firebase.firestore.FieldValue.serverTimestamp()});
+  }).then(function(){
+    msg.textContent='✅ Usuário criado!';msg.style.color='var(--ok)';
+    document.getElementById('novo-user-email').value='';
+    document.getElementById('novo-user-nome').value='';
+    document.getElementById('novo-user-senha').value='';
+    carregarUsuariosPainel();
+  }).catch(function(e){
+    var erros={'auth/email-already-in-use':'E-mail já cadastrado.'};
+    msg.textContent=erros[e.code]||'Erro: '+e.message;msg.style.color='var(--bad)';
+  });
+}
+
+function removerUsuario(uid){if(!confirm('Remover?'))return;db.collection('usuarios_pafre').doc(uid).delete().then(carregarUsuariosPainel);}
+
+function escHtml(s){return(s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+</script>
+<!-- Rodapé -->
+<script>var _f=document.createElement('div');_f.style.cssText='text-align:center;padding:18px 16px 32px;font-size:11px;color:#999;border-top:1px solid #e4e4dc;margin-top:24px;background:#f4f4ef';_f.innerHTML='Copyright &copy; '+new Date().getFullYear()+' <strong style="color:#555">PAFRE GESTÃO &amp; TECNOLOGIA</strong>. Todos os direitos reservados.';document.body.appendChild(_f);</script>
+</body>
+</html>
