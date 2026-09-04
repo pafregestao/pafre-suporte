@@ -308,6 +308,7 @@ function enviarResposta(){
     var msgs=(chamadoAtual.mensagens||[]).concat([{texto:texto,autor:user.email,role:'pafre',criadoEm:new Date().toLocaleString('pt-BR')}]);
     update.mensagens=msgs;
   }
+  update.lidoMorador=false;
   db.collection('chamados_suporte').doc(chamadoAtual.id).update(update).then(function(){
     document.getElementById('msg-input').value='';
     document.getElementById('novo-status').value='';
