@@ -236,12 +236,27 @@ auth.onAuthStateChanged(function(user){
     document.getElementById('login-screen').style.display='none';
     document.getElementById('painel').style.display='block';
     document.getElementById('hdr-usuario').textContent=user.email;
+    garantirUsuarioPainel(user);
     carregarChamados();
   } else {
     document.getElementById('login-screen').style.display='flex';
     document.getElementById('painel').style.display='none';
   }
 });
+
+function garantirUsuarioPainel(user){
+  db.collection('usuarios_pafre').doc(user.uid).get().then(function(doc){
+    if(!doc.exists){
+      db.collection('usuarios_pafre').doc(user.uid).set({
+        email:user.email,
+        nome:user.email.split('@')[0],
+        criadoEm:firebase.firestore.FieldValue.serverTimestamp()
+      }).then(function(){
+        if(document.getElementById('modalUsuarios').classList.contains('on')) carregarUsuariosPainel();
+      }).catch(function(){});
+    }
+  }).catch(function(){});
+}
 
 function fazerLogin(){
   var email=document.getElementById('l-email').value.trim();
