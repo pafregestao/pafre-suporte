@@ -466,6 +466,7 @@ function enviarResposta(){
       var cor=SEV_COR[chamadoAtual.severidade]||'#888';
       document.getElementById('modal-badges').innerHTML='<span class="badge '+(STATUS_BADGE[novoStatus]||'gray')+'">'+novoStatus+'</span><span style="font-size:11px;padding:3px 9px;border-radius:99px;background:'+cor+'22;color:'+cor+';font-weight:600">'+chamadoAtual.severidade+'</span>';
     }
+    fecharModal();
   }).catch(function(e){alert('Erro: '+e.message);});
 }
 
