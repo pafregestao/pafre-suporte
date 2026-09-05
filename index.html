@@ -30,6 +30,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .filtros{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
 .fbtn{font-size:12px;padding:5px 12px;border-radius:99px;border:1px solid var(--border);background:transparent;color:var(--txt2);cursor:pointer}
 .fbtn.on{background:var(--azul);color:#fff;border-color:var(--azul)}
+.painel-tab{font-size:13px;padding:9px 16px;border:none;background:transparent;color:var(--txt2);cursor:pointer;border-bottom:2px solid transparent;font-weight:600}
+.painel-tab.on{color:var(--azul);border-bottom-color:var(--azul)}
+@media(max-width:700px){#dash-charts-grid{grid-template-columns:1fr!important}}
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:flex-start;justify-content:center;padding:40px 14px;overflow-y:auto}
 .modal-overlay.on{display:flex}
 .modal-box{background:var(--card);border-radius:16px;width:100%;max-width:680px;margin-bottom:40px}
@@ -54,6 +57,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .fi:focus{outline:none;border-color:var(--azul)}
 .btn-primary{width:100%;padding:11px;border-radius:9px;background:var(--azul);color:#fff;border:none;font-size:14px;font-weight:600;cursor:pointer}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -83,21 +87,60 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
     <div class="hdr-ico" onclick="fazerLogout()" title="Sair">🚪</div>
   </div>
   <div class="wrap">
-    <div class="metrics" id="metricas"></div>
-    <div class="sec" style="display:flex;justify-content:space-between;align-items:center">
-      Chamados de suporte
-      <input id="busca" placeholder="🔍 Buscar..." style="font-size:12px;padding:5px 10px;border:1px solid var(--border);border-radius:8px;width:180px" oninput="renderChamados()">
+    <div class="painel-tabs" style="display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--border)">
+      <button id="tab-fila" class="painel-tab on" onclick="trocarAbaPainel('fila')">📋 Fila de chamados</button>
+      <button id="tab-dashboard" class="painel-tab" onclick="trocarAbaPainel('dashboard')">📊 Dashboard</button>
     </div>
-    <div class="filtros">
-      <button class="fbtn on" onclick="setFiltro('todos',this)">Todos</button>
-      <button class="fbtn" onclick="setFiltro('Aberto',this)">Abertos</button>
-      <button class="fbtn" onclick="setFiltro('Em análise',this)">Em análise</button>
-      <button class="fbtn" onclick="setFiltro('Aguardando cliente',this)">Aguardando</button>
-      <button class="fbtn" onclick="setFiltro('Resolvido',this)">Resolvidos</button>
-      <button class="fbtn" onclick="setFiltro('Fechado',this)">Fechados</button>
+
+    <div id="secao-fila">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+        <select id="filtro-condominio" onchange="renderMetricas();renderChamados()" style="font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:#fff">
+          <option value="todos">🏢 Todos os condomínios</option>
+        </select>
+        <input id="busca" placeholder="🔍 Buscar..." style="flex:1;min-width:160px;font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:8px" oninput="renderChamados()">
+      </div>
+      <div class="metrics" id="metricas"></div>
+      <div class="sec">Chamados de suporte</div>
+      <div class="filtros">
+        <button class="fbtn on" onclick="setFiltro('todos',this)">Todos</button>
+        <button class="fbtn" onclick="setFiltro('Aberto',this)">Abertos</button>
+        <button class="fbtn" onclick="setFiltro('Em análise',this)">Em análise</button>
+        <button class="fbtn" onclick="setFiltro('Aguardando cliente',this)">Aguardando</button>
+        <button class="fbtn" onclick="setFiltro('Resolvido',this)">Resolvidos</button>
+        <button class="fbtn" onclick="setFiltro('Fechado',this)">Fechados</button>
+        <button class="fbtn" onclick="setFiltro('Não procedente',this)" style="margin-left:auto">🚫 Não procedente (<span id="cnt-nao-proc">0</span>)</button>
+      </div>
+      <div class="card" style="padding:0 16px" id="lista-chamados">
+        <div style="padding:20px;text-align:center;color:var(--txt3)">Carregando...</div>
+      </div>
     </div>
-    <div class="card" style="padding:0 16px" id="lista-chamados">
-      <div style="padding:20px;text-align:center;color:var(--txt3)">Carregando...</div>
+
+    <div id="secao-dashboard" style="display:none">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+        <select id="dash-condominio" onchange="renderDashboard()" style="font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:#fff">
+          <option value="todos">🏢 Todos os condomínios</option>
+        </select>
+        <select id="dash-periodo" onchange="onDashPeriodoChange()" style="font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:#fff">
+          <option value="todos">Todo o período</option>
+          <option value="7">Últimos 7 dias</option>
+          <option value="30" selected>Últimos 30 dias</option>
+          <option value="90">Últimos 90 dias</option>
+          <option value="custom">Personalizado...</option>
+        </select>
+        <input type="date" id="dash-data-ini" style="display:none;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:8px" onchange="renderDashboard()">
+        <input type="date" id="dash-data-fim" style="display:none;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:8px" onchange="renderDashboard()">
+      </div>
+      <div class="metrics" id="dash-metricas"></div>
+      <div id="dash-charts-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">
+        <div class="card">
+          <div style="font-size:11px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Chamados por status</div>
+          <div style="position:relative;height:220px"><canvas id="chartStatus"></canvas></div>
+        </div>
+        <div class="card">
+          <div style="font-size:11px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Chamados por condomínio</div>
+          <div style="position:relative;height:220px"><canvas id="chartCondominio"></canvas></div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -125,6 +168,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
             <option value="Aguardando cliente">Aguardando cliente</option>
             <option value="Resolvido">Resolvido</option>
             <option value="Fechado">Fechado</option>
+            <option value="Não procedente">🚫 Não procedente</option>
           </select>
           <button onclick="enviarResposta()" style="padding:8px 16px;background:var(--azul);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Enviar</button>
         </div>
@@ -171,8 +215,11 @@ var chamados=[];
 var filtroStatus='todos';
 var chamadoAtual=null;
 var SEV_COR={Crítica:'#c0392b',Alta:'#b8630a',Média:'#1565c0',Baixa:'#2d7a3a'};
-var STATUS_BADGE={Aberto:'bad','Em análise':'warn','Aguardando cliente':'blue',Resolvido:'ok',Fechado:'gray'};
+var STATUS_BADGE={Aberto:'bad','Em análise':'warn','Aguardando cliente':'blue',Resolvido:'ok',Fechado:'gray','Não procedente':'gray'};
 var SLA_HORAS={Crítica:4,Alta:24,Média:48,Baixa:120};
+var STATUS_ORDEM=['Aberto','Em análise','Aguardando cliente','Resolvido','Fechado','Não procedente'];
+var STATUS_COR={Aberto:'#c0392b','Em análise':'#b8630a','Aguardando cliente':'#1565c0',Resolvido:'#2d7a3a',Fechado:'#888','Não procedente':'#a0a0a0'};
+var chartStatus=null,chartCondominio=null;
 
 document.addEventListener('DOMContentLoaded',function(){
   [['olho-login','l-senha'],['olho-novo','novo-user-senha']].forEach(function(p){
@@ -212,18 +259,24 @@ function carregarChamados(){
   db.collection('chamados_suporte').orderBy('criadoEm','desc').onSnapshot(function(snap){
     chamados=[];
     snap.forEach(function(doc){chamados.push(Object.assign({id:doc.id},doc.data()));});
-    renderMetricas();renderChamados();
+    atualizarFiltroCondominios();
+    renderMetricas();renderChamados();renderDashboard();
   });
 }
 
 function renderMetricas(){
-  var total=chamados.length;
-  var abertos=chamados.filter(function(c){return c.status==='Aberto';}).length;
-  var criticos=chamados.filter(function(c){return c.severidade==='Alta'&&c.status!=='Fechado';}).length;
+  var condo=(document.getElementById('filtro-condominio')||{}).value||'todos';
+  var base=condo==='todos'?chamados:chamados.filter(function(c){return (c.condominio||'—')===condo;});
+  var total=base.length;
+  var abertos=base.filter(function(c){return c.status==='Aberto';}).length;
+  var criticos=base.filter(function(c){return c.severidade==='Alta'&&c.status!=='Fechado';}).length;
   var hoje=new Date().toDateString();
-  var novosHoje=chamados.filter(function(c){return c.criadoEm&&new Date(c.criadoEm.toDate?c.criadoEm.toDate():c.criadoEm).toDateString()===hoje;}).length;
+  var novosHoje=base.filter(function(c){return c.criadoEm&&new Date(c.criadoEm.toDate?c.criadoEm.toDate():c.criadoEm).toDateString()===hoje;}).length;
+  var naoProc=base.filter(function(c){return c.status==='Não procedente';}).length;
   document.getElementById('metricas').innerHTML=
     mc('Total',total)+mc('Abertos',abertos,'warn')+mc('Alta prioridade',criticos,'bad')+mc('Hoje',novosHoje,'blue');
+  var cntEl=document.getElementById('cnt-nao-proc');
+  if(cntEl) cntEl.textContent=naoProc;
 }
 function mc(l,v,c){return '<div class="mc"><div class="mc-lbl">'+l+'</div><div class="mc-val" style="color:var(--'+(c||'azul')+')">'+v+'</div></div>';}
 
@@ -233,9 +286,104 @@ function setFiltro(f,btn){
   btn.classList.add('on');renderChamados();
 }
 
+function atualizarFiltroCondominios(){
+  var condos=Array.from(new Set(chamados.map(function(c){return c.condominio||'—';}))).sort();
+  ['filtro-condominio','dash-condominio'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(!el) return;
+    var atual=el.value||'todos';
+    el.innerHTML='<option value="todos">🏢 Todos os condomínios</option>'+
+      condos.map(function(c){return '<option value="'+escHtml(c)+'"'+(c===atual?' selected':'')+'>'+escHtml(c)+'</option>';}).join('');
+  });
+}
+
+function trocarAbaPainel(tab){
+  var bFila=document.getElementById('tab-fila'),bDash=document.getElementById('tab-dashboard');
+  var sFila=document.getElementById('secao-fila'),sDash=document.getElementById('secao-dashboard');
+  if(tab==='fila'){
+    sFila.style.display='block';sDash.style.display='none';
+    bFila.classList.add('on');bDash.classList.remove('on');
+  } else {
+    sFila.style.display='none';sDash.style.display='block';
+    bDash.classList.add('on');bFila.classList.remove('on');
+    renderDashboard();
+  }
+}
+
+function onDashPeriodoChange(){
+  var v=document.getElementById('dash-periodo').value;
+  var ini=document.getElementById('dash-data-ini'),fim=document.getElementById('dash-data-fim');
+  if(v==='custom'){ini.style.display='inline-block';fim.style.display='inline-block';}
+  else{ini.style.display='none';fim.style.display='none';}
+  renderDashboard();
+}
+
+function renderDashboard(){
+  var elM=document.getElementById('dash-metricas');
+  if(!elM) return;
+  var condo=(document.getElementById('dash-condominio')||{}).value||'todos';
+  var periodo=(document.getElementById('dash-periodo')||{}).value||'30';
+  var agora=Date.now();
+  var limiteIni=null,limiteFim=null;
+  if(periodo==='7') limiteIni=agora-7*86400000;
+  else if(periodo==='30') limiteIni=agora-30*86400000;
+  else if(periodo==='90') limiteIni=agora-90*86400000;
+  else if(periodo==='custom'){
+    var vi=(document.getElementById('dash-data-ini')||{}).value,vf=(document.getElementById('dash-data-fim')||{}).value;
+    if(vi) limiteIni=new Date(vi+'T00:00:00').getTime();
+    if(vf) limiteFim=new Date(vf+'T23:59:59').getTime();
+  }
+  var base=chamados.filter(function(c){
+    if(condo!=='todos'&&(c.condominio||'—')!==condo) return false;
+    if(limiteIni!=null||limiteFim!=null){
+      var ts=c.criadoEm&&c.criadoEm.toDate?c.criadoEm.toDate().getTime():null;
+      if(limiteIni!=null&&(ts===null||ts<limiteIni)) return false;
+      if(limiteFim!=null&&(ts===null||ts>limiteFim)) return false;
+    }
+    return true;
+  });
+  var counts={};
+  STATUS_ORDEM.forEach(function(s){counts[s]=0;});
+  base.forEach(function(c){counts[c.status]=(counts[c.status]||0)+1;});
+  elM.innerHTML=
+    mc('Total',base.length)+
+    mc('Abertos',counts['Aberto']||0,'bad')+
+    mc('Em análise',counts['Em análise']||0,'warn')+
+    mc('Aguardando cliente',counts['Aguardando cliente']||0,'blue')+
+    mc('Resolvidos',counts['Resolvido']||0,'ok')+
+    mc('Fechados',counts['Fechado']||0)+
+    mc('Não procedente',counts['Não procedente']||0);
+
+  var ctxS=document.getElementById('chartStatus');
+  if(ctxS&&window.Chart){
+    if(chartStatus) chartStatus.destroy();
+    chartStatus=new Chart(ctxS,{
+      type:'bar',
+      data:{labels:STATUS_ORDEM,datasets:[{label:'Chamados',data:STATUS_ORDEM.map(function(s){return counts[s]||0;}),backgroundColor:STATUS_ORDEM.map(function(s){return STATUS_COR[s];})}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}
+    });
+  }
+
+  var porCondo={};
+  base.forEach(function(c){var k=c.condominio||'—';porCondo[k]=(porCondo[k]||0)+1;});
+  var condoLabels=Object.keys(porCondo).sort();
+  var ctxC=document.getElementById('chartCondominio');
+  if(ctxC&&window.Chart){
+    if(chartCondominio) chartCondominio.destroy();
+    chartCondominio=new Chart(ctxC,{
+      type:'bar',
+      data:{labels:condoLabels,datasets:[{label:'Chamados',data:condoLabels.map(function(k){return porCondo[k];}),backgroundColor:'#1a3a5c'}]},
+      options:{responsive:true,maintainAspectRatio:false,indexAxis:condoLabels.length>4?'y':'x',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{precision:0}},y:{beginAtZero:true,ticks:{precision:0}}}}
+    });
+  }
+}
+
 function renderChamados(){
   var q=(document.getElementById('busca').value||'').toLowerCase();
+  var condo=(document.getElementById('filtro-condominio')||{}).value||'todos';
   var filtrados=chamados.filter(function(c){
+    if(filtroStatus==='todos'&&c.status==='Não procedente') return false;
+    if(condo!=='todos'&&(c.condominio||'—')!==condo) return false;
     var matchStatus=filtroStatus==='todos'||c.status===filtroStatus;
     var matchBusca=!q||(c.titulo||'').toLowerCase().includes(q)||(c.condominio||'').toLowerCase().includes(q)||(c.nome||'').toLowerCase().includes(q);
     return matchStatus&&matchBusca;
