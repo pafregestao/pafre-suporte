@@ -475,18 +475,57 @@ document.getElementById('modalOverlay').addEventListener('click',function(e){if(
 
 function abrirConfigUsuarios(){carregarUsuariosPainel();document.getElementById('modalUsuarios').classList.add('on');}
 
+var usuariosPainelCache=[];
 function carregarUsuariosPainel(){
   db.collection('usuarios_pafre').get().then(function(snap){
-    var el=document.getElementById('lista-usuarios-painel');
-    if(snap.empty){el.innerHTML='<div style="color:var(--txt3);font-size:13px">Nenhum usuário cadastrado ainda.</div>';return;}
-    el.innerHTML=snap.docs.map(function(doc){
-      var d=doc.data();
-      return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f4f4ef">'+
-        '<div style="flex:1"><div style="font-weight:600;font-size:13px">'+escHtml(d.nome||'')+'</div><div style="font-size:11px;color:var(--txt3)">'+escHtml(d.email||'')+'</div></div>'+
-        '<button onclick="removerUsuario(\''+doc.id+'\')" style="font-size:11px;padding:3px 8px;border-radius:6px;border:1px solid #ffcdd2;background:#fdecea;color:#c0392b;cursor:pointer">Remover</button>'+
-      '</div>';
-    }).join('');
+    usuariosPainelCache=snap.docs.map(function(doc){return Object.assign({uid:doc.id},doc.data());});
+    renderUsuariosPainel();
   });
+}
+function renderUsuariosPainel(){
+  var el=document.getElementById('lista-usuarios-painel');
+  if(!usuariosPainelCache.length){el.innerHTML='<div style="color:var(--txt3);font-size:13px">Nenhum usuário cadastrado ainda.</div>';return;}
+  el.innerHTML=usuariosPainelCache.map(function(d){
+    return '<div style="border-bottom:1px solid #f4f4ef;padding:8px 0">'+
+      '<div style="display:flex;align-items:center;gap:8px">'+
+        '<div style="flex:1"><div style="font-weight:600;font-size:13px">'+escHtml(d.nome||'')+'</div><div style="font-size:11px;color:var(--txt3)">'+escHtml(d.email||'')+'</div></div>'+
+        '<button onclick="toggleEditarUsuario(\''+d.uid+'\')" style="font-size:11px;padding:3px 8px;border-radius:6px;border:1px solid var(--border);background:#f0f5fb;color:var(--azul);cursor:pointer">✏️ Editar</button>'+
+        '<button onclick="removerUsuario(\''+d.uid+'\')" style="font-size:11px;padding:3px 8px;border-radius:6px;border:1px solid #ffcdd2;background:#fdecea;color:#c0392b;cursor:pointer">Remover</button>'+
+      '</div>'+
+      '<div id="edit-user-'+d.uid+'" style="display:none;margin-top:8px;padding:10px;background:#f8f8f4;border-radius:8px">'+
+        '<label style="display:block;font-size:11px;font-weight:600;color:#666;margin-bottom:3px">Nome</label>'+
+        '<input id="edit-nome-'+d.uid+'" class="fi" value="'+escHtml(d.nome||'')+'" style="margin-bottom:8px">'+
+        '<div style="font-size:11px;color:#999;margin-bottom:8px">📧 '+escHtml(d.email||'')+' — o e-mail de login não pode ser alterado por aqui (limitação do Firebase Auth no cliente). Para trocar, remova e recrie o usuário com o novo e-mail.</div>'+
+        '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
+          '<button onclick="salvarNomeUsuario(\''+d.uid+'\')" style="font-size:12px;padding:6px 12px;border-radius:7px;border:none;background:var(--azul);color:#fff;font-weight:600;cursor:pointer">💾 Salvar nome</button>'+
+          '<button onclick="enviarResetSenha(\''+escHtml(d.email||'')+'\')" style="font-size:12px;padding:6px 12px;border-radius:7px;border:1px solid var(--border);background:#fff;color:var(--azul);cursor:pointer">📧 Enviar redefinição de senha</button>'+
+          '<button onclick="toggleEditarUsuario(\''+d.uid+'\')" style="font-size:12px;padding:6px 12px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--txt2);cursor:pointer">Cancelar</button>'+
+        '</div>'+
+        '<div id="msg-edit-'+d.uid+'" style="font-size:12px;margin-top:6px;min-height:16px"></div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+function toggleEditarUsuario(uid){
+  var el=document.getElementById('edit-user-'+uid);
+  if(!el) return;
+  el.style.display=el.style.display==='none'?'block':'none';
+}
+function salvarNomeUsuario(uid){
+  var nome=document.getElementById('edit-nome-'+uid).value.trim();
+  var msg=document.getElementById('msg-edit-'+uid);
+  if(!nome){msg.textContent='Informe o nome.';msg.style.color='var(--bad)';return;}
+  db.collection('usuarios_pafre').doc(uid).update({nome:nome}).then(function(){
+    msg.textContent='✅ Nome atualizado!';msg.style.color='var(--ok)';
+    setTimeout(carregarUsuariosPainel,900);
+  }).catch(function(e){msg.textContent='Erro: '+e.message;msg.style.color='var(--bad)';});
+}
+function enviarResetSenha(email){
+  if(!email){alert('E-mail não encontrado.');return;}
+  if(!confirm('Enviar e-mail de redefinição de senha para '+email+'?')) return;
+  auth.sendPasswordResetEmail(email).then(function(){
+    alert('✅ E-mail de redefinição enviado para '+email);
+  }).catch(function(e){alert('Erro ao enviar: '+e.message);});
 }
 
 function criarUsuario(){
