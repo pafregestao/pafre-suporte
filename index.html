@@ -221,6 +221,7 @@ var SLA_HORAS={Crítica:4,Alta:24,Média:48,Baixa:120};
 var STATUS_ORDEM=['Aberto','Em análise','Aguardando cliente','Resolvido','Fechado','Não procedente'];
 var STATUS_COR={Aberto:'#c0392b','Em análise':'#b8630a','Aguardando cliente':'#1565c0',Resolvido:'#2d7a3a',Fechado:'#888','Não procedente':'#a0a0a0'};
 var chartStatus=null,chartCondominio=null;
+var usuarioAtualNome=null;
 
 document.addEventListener('DOMContentLoaded',function(){
   [['olho-login','l-senha'],['olho-novo','novo-user-senha']].forEach(function(p){
@@ -237,7 +238,7 @@ auth.onAuthStateChanged(function(user){
     document.getElementById('login-screen').style.display='none';
     document.getElementById('painel').style.display='block';
     document.getElementById('hdr-usuario').textContent=user.email;
-    garantirUsuarioPainel(user);
+    carregarNomeAtendente(user);
     carregarChamados();
   } else {
     document.getElementById('login-screen').style.display='flex';
@@ -245,14 +246,20 @@ auth.onAuthStateChanged(function(user){
   }
 });
 
-function garantirUsuarioPainel(user){
+function carregarNomeAtendente(user){
   db.collection('usuarios_pafre').doc(user.uid).get().then(function(doc){
-    if(!doc.exists){
+    if(doc.exists&&doc.data().nome){
+      usuarioAtualNome=doc.data().nome;
+      document.getElementById('hdr-usuario').textContent=usuarioAtualNome;
+    } else {
+      var nomeInicial=user.email.split('@')[0];
       db.collection('usuarios_pafre').doc(user.uid).set({
         email:user.email,
-        nome:user.email.split('@')[0],
+        nome:nomeInicial,
         criadoEm:firebase.firestore.FieldValue.serverTimestamp()
       }).then(function(){
+        usuarioAtualNome=nomeInicial;
+        document.getElementById('hdr-usuario').textContent=usuarioAtualNome;
         if(document.getElementById('modalUsuarios').classList.contains('on')) carregarUsuariosPainel();
       }).catch(function(){});
     }
@@ -469,7 +476,7 @@ function enviarResposta(){
   var update={};
   if(novoStatus) update.status=novoStatus;
   if(texto){
-    var msgs=(chamadoAtual.mensagens||[]).concat([{texto:texto,autor:user.email,role:'pafre',criadoEm:new Date().toLocaleString('pt-BR')}]);
+    var msgs=(chamadoAtual.mensagens||[]).concat([{texto:texto,autor:usuarioAtualNome||user.email,role:'pafre',criadoEm:new Date().toLocaleString('pt-BR')}]);
     update.mensagens=msgs;
   }
   update.lidoMorador=false;
@@ -533,6 +540,10 @@ function salvarNomeUsuario(uid){
   if(!nome){msg.textContent='Informe o nome.';msg.style.color='var(--bad)';return;}
   db.collection('usuarios_pafre').doc(uid).update({nome:nome}).then(function(){
     msg.textContent='✅ Nome atualizado!';msg.style.color='var(--ok)';
+    if(auth.currentUser&&auth.currentUser.uid===uid){
+      usuarioAtualNome=nome;
+      document.getElementById('hdr-usuario').textContent=nome;
+    }
     setTimeout(carregarUsuariosPainel,900);
   }).catch(function(e){msg.textContent='Erro: '+e.message;msg.style.color='var(--bad)';});
 }
